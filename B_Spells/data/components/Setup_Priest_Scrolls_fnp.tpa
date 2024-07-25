@@ -1,0 +1,203 @@
+/////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+/////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////            				   \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////            				   \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////      Scroll Creation and Distribution     \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////            				   \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////            				   \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+/////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+/////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////                                         //////////////////////////////////////
+/////////////////////////////////////                 Scrolls                 //////////////////////////////////////
+/////////////////////////////////////                                         //////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Priest Scrolls
+COPY_EXISTING ~d5fnplst.2da~ ~override~
+  READ_2DA_ENTRIES_NOW rows 4
+  FOR (row = 0; row < rows; ++row) BEGIN
+	READ_2DA_ENTRY_FORMER rows row 0 orig_spl
+	READ_2DA_ENTRY_FORMER rows row 1 scr_spl
+ 	READ_2DA_ENTRY_FORMER rows row 4 scr_sph
+//        PATCH_PRINT ~%scr_spl% is a spell (oritinally %orig_spl%) in the %scr_sph% sphere~        //just to be sure...
+
+	INNER_ACTION BEGIN
+             INCLUDE ~%mod_folder%/lib/scroll_lists/fnp_scroll_ref.tpa~
+	END// end inner action
+END // end for row
+
+ACTION_PHP_EACH fnp_scroll_ref AS block => clock BEGIN
+  ACTION_IF ("%block%" STRING_COMPARE_CASE "MINOR" != 0) BEGIN
+     COPY_EXISTING_REGEXP GLOB ~%block%.SPL~ ~override~
+             READ_LONG  0x0034 level //spell level
+ 	     READ_LONG  0x0008 name //spell name
+	     READ_LONG  0x0050 desc //description
+	     READ_SHORT 0x007E target //Target-check
+	     READ_SHORT 0x0080 range //range-check
+             READ_ASCII 0x0076 spellicon (7)
+         INNER_PATCH_SAVE scroll_ref ~%SOURCE_RES%~ BEGIN
+         END
+         INNER_PATCH_SAVE gen9 ~%SOURCE_RES%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~SPPR~ ~B_P~
+         END
+         INNER_PATCH_SAVE gen8 ~%gen9%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~B_P1~ ~B_P%level%~
+         END
+         INNER_PATCH_SAVE gen7 ~%gen8%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~B_P2~ ~B_P%level%~
+         END
+         INNER_PATCH_SAVE gen6 ~%gen7%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~B_P3~ ~B_P%level%~
+         END
+         INNER_PATCH_SAVE gen5 ~%gen6%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~B_P4~ ~B_P%level%~
+         END
+         INNER_PATCH_SAVE gen4 ~%gen5%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~B_P5~ ~B_P%level%~
+         END
+         INNER_PATCH_SAVE gen3 ~%gen4%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~B_P6~ ~B_P%level%~
+         END
+         INNER_PATCH_SAVE gen ~%gen3%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~B_P7~ ~B_P%level%~
+         END
+           INNER_ACTION BEGIN
+            COPY ~%mod_folder%/data/scrolls/priest_1/b_ps101.itm~ ~override/%gen%.ITM~   //Level 1 universal as generic.  Modify all others after
+             WRITE_LONG 0x0008 ~%name%~
+             WRITE_LONG 0x000c ~%name%~
+             WRITE_LONG 0x0054 ~%desc%~
+             WRITE_SHORT 0x007E target //Target-check
+             WRITE_SHORT 0x0080 range //range-check
+             WRITE_ASCIIE 0x0076  ~%spellicon%A~   //use icon
+             WRITE_ASCIIE 0x003a  ~%spellicon%A~   //inventory icon
+             WRITE_LONG 0x0034 (level * 100)       //cost
+             LPF ALTER_EFFECT INT_VAR match_opcode = 146 STR_VAR resource = EVAL ~%clock%~ END
+               INCLUDE ~%mod_folder%/lib/scroll_lists/fnp_scroll_sell.tpa~
+//           PATCH_PRINT ~%gen% is the name of the scroll that casts the spell %clock%~        //just to be sure...
+           END //end inner action
+           BUT_ONLY
+  END
+END //
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////                                         //////////////////////////////////////
+/////////////////////////////////////              Missing BAMS               //////////////////////////////////////
+/////////////////////////////////////                                         //////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//it seems that BG2EE (At least!) doesn't have all priest scroll bams.  Add them here if needed
+ACTION_IF GAME_IS ~bg2ee~ THEN BEGIN  //missing scroll bams in bg2ee
+      COPY ~%mod_folder%/data/scrolls/bam/missing~ ~override~   //missing scroll bams
+END
+
+//if bam has no pres ref (e.g. say a custom spl where the modder didn't supply a scroll bam)
+ACTION_PHP_EACH fnp_scroll AS rock => sock BEGIN
+   COPY_EXISTING_REGEXP GLOB ~%rock%*\.ITM~ ~override~
+	 PATCH_IF (~%SOURCE_SIZE%~ > ~0x71~) BEGIN
+              READ_ASCII 0x0076 spellicon (7)  //needed?
+              PATCH_IF !FILE_EXISTS_IN_GAME ~%spellicon%A.BAM~ BEGIN
+                   INNER_ACTION BEGIN
+                        COPY ~%mod_folder%/data/scrolls/bam/sppr101a.bam~ ~override/%spellicon%A.BAM~   //missing scroll bams
+                   END
+              END
+         END    //end valid file
+ BUT_ONLY
+END
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////                                         //////////////////////////////////////
+/////////////////////////////////////              Scroll Placement           //////////////////////////////////////
+/////////////////////////////////////                                         //////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//designate stores
+COPY_EXISTING_REGEXP GLOB ~^.+\.sto$~ ~override~ // Load all stores BEG CAMCODE:
+	READ_BYTE 0x10 "flags" ELSE 0
+            PATCH_IF (("%flags%" BAND 0b00100001) = 0b00100001) BEGIN // if cures available and sells stuff; also filters out invalid files
+            READ_LONG 0x2c "buy_off"   ELSE 0
+  	    READ_LONG 0x34 "sale_off"  ELSE 0
+            READ_LONG 0x4c "drink_off" ELSE 0
+ 	    READ_LONG 0x70 "cure_off"  ELSE 0
+	    READ_LONG 0x74 "cure_num"  ELSE 0
+            INNER_PATCH_SAVE store_s ~%SOURCE_RES%~ BEGIN END
+	    SET "new_cure" = 0
+	    SET "sppr103" = 0 // cure light wounds
+  	    SET "sppr307" = 0 // remove curse
+  	    SET "sppr401" = 0 // remove curse
+  	    SET "sppr504" = 0 // raise dead
+	    SET "sppr712" = 0 // res
+            FOR (index = 0; index < cure_num; index = index + 1) BEGIN
+		READ_ASCII ("%cure_off%" + ("%index%" * 0x0c)) "resref"
+		PATCH_IF ("%resref%" STRING_COMPARE_CASE "sppr103" = 0) BEGIN
+		  SET "sppr103" = 1
+		END   //end check for sppr103
+		PATCH_IF ("%resref%" STRING_COMPARE_CASE "sppr307" = 0) BEGIN
+		  SET "sppr307" = 1
+		END   //end check for sppr307
+		PATCH_IF ("%resref%" STRING_COMPARE_CASE "sppr401" = 0) BEGIN
+		  SET "sppr401" = 1
+		END   //end check for sppr401
+		PATCH_IF ("%resref%" STRING_COMPARE_CASE "sppr504" = 0) BEGIN
+		  SET "sppr504" = 1
+		END   //end check for sppr504
+		PATCH_IF ("%resref%" STRING_COMPARE_CASE "sppr712" = 0) BEGIN
+                  SET "sppr712" = 1
+		END   //end check for sppr712
+            END //end for loop
+            INNER_ACTION BEGIN
+                ACTION_IF ("sppr103" = 1) BEGIN
+                   ACTION_PHP_EACH fnp_scroll_sell AS s_item => s_level BEGIN
+                        ACTION_IF (~%s_level%~ < 3) BEGIN
+                              COPY_EXISTING ~%store_s%.STO~ ~override~
+                                  ADD_STORE_ITEM ~%s_item%~ #1 #0 #0 ~IDENTIFIED~ #5
+                                  BUT_ONLY
+                        END//end lev less than 3
+                   END //end php action
+                END
+                ACTION_IF ("sppr307" = 1) BEGIN
+                   ACTION_PHP_EACH fnp_scroll_sell AS s_item => s_level BEGIN
+                        ACTION_IF (~%s_level%~ = 3) BEGIN
+                              COPY_EXISTING ~%store_s%.STO~ ~override~
+                                  ADD_STORE_ITEM ~%s_item%~ #1 #0 #0 ~IDENTIFIED~ #5
+                                  BUT_ONLY
+                        END//end lev less than 3
+                   END //end php action
+                END
+                ACTION_IF ("sppr401" = 1) BEGIN
+                   ACTION_PHP_EACH fnp_scroll_sell AS s_item => s_level BEGIN
+                        ACTION_IF (~%s_level%~ = 4) BEGIN
+                              COPY_EXISTING ~%store_s%.STO~ ~override~
+                                  ADD_STORE_ITEM ~%s_item%~ #1 #0 #0 ~IDENTIFIED~ #5
+                                  BUT_ONLY
+                        END//end lev less than 3
+                   END //end php action
+                END
+                ACTION_IF ("sppr504" = 1) BEGIN
+                   ACTION_PHP_EACH fnp_scroll_sell AS s_item => s_level BEGIN
+                        ACTION_IF (~%s_level%~ = 5) BEGIN
+                              COPY_EXISTING ~%store_s%.STO~ ~override~
+                                  ADD_STORE_ITEM ~%s_item%~ #1 #0 #0 ~IDENTIFIED~ #5
+                                  BUT_ONLY
+                        END//end lev less than 3
+                   END //end php action
+                END
+                ACTION_IF ("sppr712" = 1) BEGIN
+                   ACTION_PHP_EACH fnp_scroll_sell AS s_item => s_level BEGIN
+                        ACTION_IF (~%s_level%~ > 5) BEGIN
+                              COPY_EXISTING ~%store_s%.STO~ ~override~
+                                  ADD_STORE_ITEM ~%s_item%~ #1 #0 #0 ~IDENTIFIED~ #3
+                                  BUT_ONLY
+                        END//end lev less than 3
+                   END //end php action
+                END
+            END //end inner action
+       END //end cure check

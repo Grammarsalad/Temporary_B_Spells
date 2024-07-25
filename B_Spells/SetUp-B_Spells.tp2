@@ -1,0 +1,449 @@
+BACKUP ~backup/B_Spells~
+AUTHOR ~Grammarsalad~
+README ~B_Spells\B_Spells_README.pdf~
+
+VERSION ~0.90.03~
+
+
+ALWAYS
+
+        OUTER_SPRINT ~mod_folder~ ~B_Spells~
+
+        ACTION_IF ((!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_OBSCURING_MIST~)) AND (FILE_EXISTS_IN_GAME ~dvsrv4here.mrk~)) BEGIN
+	   INCLUDE ~B_Spells/lib/add_ids.tpa~
+        END
+
+ 	ACTION_IF GAME_IS ~bg2ee~ THEN BEGIN
+          OUTER_SPRINT ~game~ ~bg2ee~
+        END
+
+ 	ACTION_IF GAME_IS ~bgee~ THEN BEGIN
+          OUTER_SPRINT ~game~ ~bgee~
+        END
+
+ 	ACTION_IF GAME_IS ~iwdee~ THEN BEGIN
+          OUTER_SPRINT ~game~ ~iwdee~
+        END
+        /*
+        //not ready yet
+	ACTION_IF NOT FILE_EXISTS ~override/b_spells_settings.ini~ BEGIN
+  	  COPY ~faiths_and_powers/b_spells_settings.ini~ ~override~
+	END
+
+  	INCLUDE ~override/b_spells_settings.ini~
+       */
+
+        INCLUDE ~B_Spells/lib/spon_cast_functions.tpa~
+
+        INCLUDE ~B_Spells/lib/add_sumtable.tpa~
+
+	INCLUDE ~B_Spells/lib/SEQUENCER_MENU.tpa~
+        
+        INCLUDE ~B_Spells/lib/illusion_crea.tpa~
+
+        INCLUDE ~B_Spells/lib/alter_spell_type.tpa~
+
+        INCLUDE ~B_Spells/lib/second_opp.tpa~
+
+        INCLUDE ~B_Spells/lib/tooltips.tpa~
+
+        INCLUDE ~B_Spells/lib/make_cantrip.tpa~
+
+        INCLUDE ~B_Spells/lib/alter_effect.tpa~
+
+        INCLUDE ~B_Spells/lib/alter_effect_add.tpa~
+
+	INCLUDE ~B_Spells/lib/remove_lines.tpa~
+
+	INCLUDE ~B_Spells/lib/summon_table.tpa~
+
+	INCLUDE ~B_Spells/lib/spell_to_innate.tpa~
+
+	INCLUDE ~B_Spells/lib/spell_clone_effects.tpa~
+
+        INCLUDE ~B_Spells/lib/bg2fp_effect_batches_fnp.tpa~
+
+        INCLUDE ~B_Spells/lib/bg2fp_effect_batches_b_vise.tpa~
+
+        INCLUDE ~B_Spells/lib/bg2fp_effect_batches_spell_saves.tpa~
+
+
+END
+
+//Below from IWDification. Looks like a way to check spell.ids for particular spells...
+//ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~WIZARD_SNILLOCS_SNOWBALL_SWARM~) OR override_arcane) BEGIN
+
+//need to keep my options open
+
+ASK_EVERY_COMPONENT
+
+/* Language Settings */
+AUTO_TRA ~B_Spells/tra/%s~
+LANGUAGE ~English~ ~english~
+         ~B_Spells/tra/english/setup.tra~
+         ~B_Spells/tra/english/IWD_spells.tra~  //for IWDEE spells
+         ~B_Spells/tra/english/new_spells.tra~  //for new spells
+         ~B_Spells/tra/english/cantrips.tra~  //for cantrips
+         ~B_Spells/tra/english/revised.tra~  //for revised
+         ~B_Spells/tra/english/items.tra~  //for items
+
+//___________________________________________________________________________________
+//Markers:
+//b_IWD.itm: FnP spells (Priest, new and specific wiz spells)
+//B_pri.itm: IWDEE priest spells (mine)
+//b_wiz.itm: all IWDEE wiz spells (mine)
+//b_new.itm to detect my new spells only (which may or may not include IWDEE spells depening on game)
+//setup-iwdification.tp2~ ~40~: IWDIFICATION priest spells
+//setup-iwdification.tp2~ ~30~: IWDIFICATION wiz spells
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+////////////////////////////////////////       Components 101-103: New Spells     ////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//			101: All new spells (including IWDEE spells if applicable)
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+BEGIN @0  //All new spells (including IWDEE spells if applicable)
+SUBCOMPONENT @100
+DESIGNATED 101
+GROUP @5 
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  ...for now
+
+
+//SR NWN deflection compatibility
+ACTION_CLEAR_ARRAY aoe_spell
+
+//Add IWD spells if not already in game_____________________________________________
+
+//IWDEE Spells
+//IWDEE priest spells not installed
+//include
+//Detects IWDEE priest spells- Not SR: checked in individual setup tpas
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_CURSE~)) BEGIN  //if not IWDEE priest spells..from any source
+      COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override~   	//to detect this component
+      COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override/B_pri.itm~
+        INCLUDE ~%mod_folder%/data/components/Setup_IWD_Spells.tpa~      //install priest spells
+
+ACTION_IF ((!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_BEAST_CLAW~)) AND (FILE_EXISTS_IN_GAME ~dvsrv4here.mrk~)) BEGIN
+ INCLUDE ~%mod_folder%/lib/iwdee_sr_readd.tpa~
+END
+
+//special: reinstall spells if any version of SR installed
+ACTION_IF FILE_EXISTS_IN_GAME ~dvsrv4here.mrk~ BEGIN
+  INCLUDE ~%mod_folder%/lib/sr_readd.tpa~
+END
+
+//Now, for other IWDEE wiz spells--Not SR which will be checked in game
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~WIZARD_CATS_GRACE~)) BEGIN    //if not other IWDEE wiz spells
+    INCLUDE ~%mod_folder%/data/components/Setup_IWD_Wiz.tpa~      //install non-fnp Wiz spells
+   COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override/b_wiz.itm~ //to detect all (my) IWDEE wiz spells
+   END
+   COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override~   //to detect IWDEE priest (and a few wiz) spells
+END
+
+//Add new spells if not in game
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_ABUNDANT_AMMO~)) BEGIN    //
+  INCLUDE ~%mod_folder%/lib/fnp_new_spells.tpa~
+END
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~WIZARD_ACCELERATE_HEALING~)) BEGIN  //if not my new spells
+    INCLUDE ~%mod_folder%/data/components/Setup_New_Spells.tpa~      //New Spells
+END
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//			102: IWDEE spells only
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+//Now, Immunities.  DO AT THE VERY END OF ALL SPELL INSTALLS
+INCLUDE ~%mod_folder%/lib/immunities.tpa~
+//sr spell deflection compatibility
+INCLUDE ~%mod_folder%/lib/compatibility_SR.tpa~
+
+BEGIN @1  //IWDEE Spells only
+SUBCOMPONENT @100
+DESIGNATED 102
+GROUP @5 
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now
+
+
+//SR NWN deflection compatibility
+ACTION_CLEAR_ARRAY aoe_spell
+
+//Detects IWDEE priest spells- Not SR: checked in individual setup tpas
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_CURSE~)) BEGIN  //if not IWDEE priest spells..from any source
+	COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override~   	//to detect this component
+      COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override/B_pri.itm~
+      INCLUDE ~%mod_folder%/data/components/Setup_IWD_Spells.tpa~      //install priest spells
+
+  ACTION_IF ((!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_BEAST_CLAW~)) AND (FILE_EXISTS_IN_GAME ~dvsrv4here.mrk~)) BEGIN
+   INCLUDE ~faiths_and_powers/lib/iwdee_sr_readd.tpa~
+  END
+
+//special: reinstall spells if any version of SR installed
+ACTION_IF FILE_EXISTS_IN_GAME ~dvsrv4here.mrk~ BEGIN
+  INCLUDE ~faiths_and_powers/lib/sr_readd.tpa~
+END
+
+//Now, for other IWDEE wiz spells--Not SR which will be checked in game
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~WIZARD_CATS_GRACE~)) BEGIN    //if not other IWDEE wiz spells
+    INCLUDE ~%mod_folder%/data/components/Setup_IWD_Wiz.tpa~      //install non-fnp Wiz spells
+   COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override/b_wiz.itm~ //to detect all (my) IWDEE wiz spells
+   END
+   COPY ~%mod_folder%/compatibility/b_IWD.itm~ ~override~   //to detect IWDEE priest (and a few wiz) spells
+END
+
+
+//Now, Immunities.  DO AT THE VERY END OF ALL SPELL INSTALLS
+INCLUDE ~%mod_folder%/lib/immunities.tpa~
+//sr spell deflection compatibility
+INCLUDE ~%mod_folder%/lib/compatibility_SR.tpa~
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//			103: New spells only
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+BEGIN @3  //New Spells only
+SUBCOMPONENT @100
+DESIGNATED 103
+GROUP @5 
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now
+
+//SR NWN deflection compatibility
+ACTION_CLEAR_ARRAY aoe_spell
+
+//Add new spells if not in game
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_ABUNDANT_AMMO~)) BEGIN    //
+  INCLUDE ~%mod_folder%/lib/fnp_new_spells.tpa~
+END
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~WIZARD_ACCELERATE_HEALING~)) BEGIN  //if not my new spells
+    INCLUDE ~%mod_folder%/data/components/Setup_New_Spells.tpa~      //New Spells
+END
+
+//Now, Immunities.  DO AT THE VERY END OF ALL SPELL INSTALLS
+INCLUDE ~%mod_folder%/lib/immunities.tpa~
+//sr spell deflection compatibility
+INCLUDE ~%mod_folder%/lib/compatibility_SR.tpa~
+
+/*
+//not ready yet
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+///////////////////////////////////   Components 201-???: Cantrips: Infinite Innate   ////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//		201: Infinite Innate Cantrips for all divine and arcane classes
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+
+BEGIN @18  //Install Infinite Innate Cantrips for all divine and arcane classes
+SUBCOMPONENT @19
+DESIGNATED 201
+GROUP @19
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now  Will check for specifics below (i.e. presence of 1st level, finite, etc.)
+
+//CODE TO SET CANTRIP TYPE (i.e. in make_cantrip.tpa) 
+
+//END CODE TO SET CANTRIP TYPE
+
+//priest orisons
+//CHECK???
+INCLUDE ~%mod_folder%/data/components/Setup_priest_0-cantrips.tpa~ //Priest infinite cantrips
+//END
+//arcane orisons
+//CHECK???
+INCLUDE ~%mod_folder%/data/components/Setup_arcane_0-cantrips.tpa~ //Priest infinite cantrips
+//END
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//		202: Infinite Innate Cantrips for all divine classes
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+
+BEGIN @20  //Install Infinite Innate Cantrips for all divine classes
+SUBCOMPONENT @19
+DESIGNATED 202
+GROUP @19
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now  Will check for specifics below (i.e. presence of 1st level, finite, etc.)
+
+//CODE TO SET CANTRIP TYPE (i.e. in make_cantrip.tpa) 
+
+//END CODE TO SET CANTRIP TYPE
+
+//priest orisons
+//CHECK???
+INCLUDE ~%mod_folder%/data/components/Setup_priest_0-cantrips.tpa~ //Priest infinite cantrips
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//		203: Infinite Innate Cantrips for all arcane classes
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+
+BEGIN @21  //Install Infinite Innate Cantrips for all arcane classes
+SUBCOMPONENT @19
+DESIGNATED 203
+GROUP @19
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now  Will check for specifics below (i.e. presence of 1st level, finite, etc.)
+
+//CODE TO SET CANTRIP TYPE (i.e. in make_cantrip.tpa) 
+
+//END CODE TO SET CANTRIP TYPE
+
+//arcane orisons
+//CHECK???
+INCLUDE ~%mod_folder%/data/components/Setup_arcane_0-cantrips.tpa~ //Priest infinite cantrips
+//END
+
+*/
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+////////////////////////////////////////       Components 501-???: New Items      ////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+//Not ready
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//			501: Install All new items (including IWDEE items if applicable)
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+BEGIN @4  //Install All new items (including IWDEE items if applicable)
+SUBCOMPONENT @101
+DESIGNATED 501
+GROUP @6 
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now
+
+ACTION_IF !FILE_EXISTS_IN_GAME ~d5_spheres.d5~ BEGIN  //no fnp spheres
+  INCLUDE ~%mod_folder%/data/components/Setup_Priest_Scrolls.tpa~      //Priest Scrolls
+END
+ACTION_IF FILE_EXISTS_IN_GAME ~d5_spheres.d5~ BEGIN  //fnp spheres (of some kind)
+  INCLUDE ~%mod_folder%/data/components/Setup_Priest_Scrolls_fnp.tpa~      //Priest Scrolls
+END
+
+INCLUDE ~%mod_folder%/data/components/Setup_New_Wands.tpa~      //Priest Scrolls
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+////////////////////////////////////////    Components 601-???: Revised Items     ////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//			601: Revise all items (Includes variant magic consumables, and revised items)
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+BEGIN @4  //Install All new items (including IWDEE items if applicable)
+SUBCOMPONENT @101
+DESIGNATED 501
+GROUP @6 
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now
+
+//revised wands
+
+//revised potions
+
+//variant wands
+INCLUDE ~%mod_folder%/data/components/Setup_Variant_Wands.tpa~      //Priest Scrolls
+
+
+//variant potions(?)
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//			505: Install Priest Scrolls
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+BEGIN @22  //Install Priest Scrolls
+SUBCOMPONENT @101
+DESIGNATED 505
+GROUP @6 
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now
+
+ACTION_IF !FILE_EXISTS_IN_GAME ~d5_spheres.d5~ BEGIN  //no fnp spheres
+  INCLUDE ~%mod_folder%/data/components/Setup_Priest_Scrolls.tpa~      //Priest Scrolls
+END
+ACTION_IF FILE_EXISTS_IN_GAME ~d5_spheres.d5~ BEGIN  //fnp spheres (of some kind)
+  INCLUDE ~%mod_folder%/data/components/Setup_Priest_Scrolls_fnp.tpa~      //Priest Scrolls
+END
+*/
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+////////////////////////////////////////                  Extras                  ////////////////////////////////////////
+////////////////////////////////////////                                          ////////////////////////////////////////  
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+//issues with the function, so not ready yet
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//
+//			1001: Class 'Extras': Spontaneous Casting (By Pecca)
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+
+BEGIN @180  //Spontaneous Casting for clerics and druids (by Pecca)
+SUBCOMPONENT @180 //Spontaneous Casting for clerics and druids (by Pecca)
+DESIGNATED 1001
+GROUP @162    //Class 'Extras'
+REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet iwdee~ @17 //~EE games only!~  for now
+
+//extra spells if nec
+ACTION_IF (!FILE_CONTAINS_EVALUATED(~spell.ids~ ~CLERIC_CURSE~)) BEGIN  //if not IWDEE priest spells..from any source
+  INCLUDE ~%mod_folder%/data/components/Setup_missing_spells.tpa~
+END
+
+//New spells if nec
+ACTION_IF NOT FILE_EXISTS_IN_GAME ~dvimhere.mrk~ BEGIN
+  INCLUDE ~%mod_folder%/lib/spon_cast_spells.tpa~
+END
+
+INCLUDE ~%mod_folder%/data/components/Setup_Spontaneous_Casting.tpa~
+
+//ADD ITEM CRAFTING COMPONENTS
+//ADD DOMAIN SPELLS (INTERACTS WITH SPON CASTING and CANTRIPS)
+//ADD
+*/
